@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeliosCore Supply Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="page-header">
+    <h1 class="page-title">HeliosCore supply dashboard</h1>
+    <p class="page-sub">Manufacturing performance · supply shortfall · key bottlenecks</p>
+  </div>
+
+  <div class="upload-zone" id="upload-zone">
+    <div class="upload-zone-text">
+      <strong>Load production data.</strong> Drop an Excel file here, or click to browse. Expects sheets <em>Supply_Demand</em>, <em>Committed_Lead_time</em>, and <em>Daily_Lot_Data</em>.
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">Browse</button>
+    <button class="upload-btn primary" onclick="loadSampleData()">Load sample data</button>
+    <div id="upload-status" class="upload-status" style="display: none;"></div>
+  </div>
+
+  <div class="section-divider">01 · SUMMARY</div>
+
+  <div class="tile-grid">
+    <div class="tile">
+      <div class="tile-label"><span class="dfn" title="Forecasted weekly demand at peak (week 6).">DEMAND</span></div>
+      <div class="tile-value" id="t-demand">—</div>
+      <div class="tile-sub" id="t-demand-sub">chips/week · W6 peak</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label"><span class="dfn" title="Current actual weekly supply.">SUPPLY</span></div>
+      <div class="tile-value" id="t-supply">—</div>
+      <div class="tile-sub" id="t-supply-sub">chips/week · W6 actual</div>
+    </div>
+  </div>
+
+  <div class="tile-grid">
+    <div id="tile-perf" class="tile clickable" onclick="handleTileClick(event, 'section-perf', 'perf-formula')">
+      <div class="tile-row-top">
+        <div class="tile-label"><span class="dfn" title="Chips lost by running below the line's potential. Recoverable via process and procurement.">PERFORMANCE GAP</span></div>
+        <button class="info-btn" onclick="event.stopPropagation(); toggleFormula('perf-formula')" aria-label="Show formula">ⓘ</button>
+      </div>
+      <div class="tile-value" id="t-perf">—</div>
+      <div class="tile-sub">chips/week · click for factors ↓</div>
+      <div class="tile-formula" id="perf-formula">
+        <div class="tile-formula-label">HOW THIS IS CALCULATED</div>
+        <div class="formula-box" id="perf-formula-body">—</div>
+      </div>
+    </div>
+    <div id="tile-cap" class="tile clickable" onclick="handleTileClick(event, 'section-cap', 'cap-formula')">
+      <div class="tile-row-top">
+        <div class="tile-label"><span class="dfn" title="Chips that cannot be made on the current line setup, even at peak performance. Requires capex.">CAPACITY GAP</span></div>
+        <button class="info-btn" onclick="event.stopPropagation(); toggleFormula('cap-formula')" aria-label="Show formula">ⓘ</button>
+      </div>
+      <div class="tile-value accent" id="t-cap">—</div>
+      <div class="tile-sub">chips/week · click for factors ↓</div>
+      <div class="tile-formula" id="cap-formula">
+        <div class="tile-formula-label">HOW THIS IS CALCULATED</div>
+        <div class="formula-box" id="cap-formula-body">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stack-bar">
+    <div class="stack-supply" id="stack-supply" title=""></div>
+    <div class="stack-perf" id="stack-perf" title=""></div>
+    <div class="stack-cap" id="stack-cap" title=""></div>
+  </div>
+  <div class="stack-caption">Total bar = demand. Hover any segment for exact values.</div>
+
+  <div class="section-divider" id="section-perf">02P · PERFORMANCE FACTORS · how to recover the <span id="perf-gap-label">—</span> chips/week gap</div>
+
+  <div class="simulator">
+    <div class="sim-header">P1 · WAFER QUALITY MIX</div>
+    <h2 class="sim-title">What if we shift the wafer grade mix?</h2>
+    <p class="sim-question">Drag to change the mix of wafer grades from ChipFab. Output recomputes live.</p>
+
+    <div style="margin-top: 1rem;">
+      <div class="tile-label" style="margin-bottom: 8px;">CURRENT MIX</div>
+      <div class="mix-bar">
+        <div class="mix-g1" id="g1-bar"><span id="g1-bar-label">G1</span></div>
+        <div class="mix-g2" id="g2-bar"><span id="g2-bar-label">G2</span></div>
+        <div class="mix-g3" id="g3-bar"><span id="g3-bar-label">G3</span></div>
+      </div>
+      <div class="mix-caption">
+        <span>Each band = % of weekly lots at that grade</span>
+        <span>weighted yield: <strong id="wafer-yield">—</strong></span>
+      </div>
+    </div>
+
+    <div class="slider-row" style="margin-top: 1rem;">
+      <div class="slider-label-row"><span class="slider-name">Grade 1 share</span><span class="slider-readout" id="g1-out">—</span></div>
+      <input type="range" id="g1" min="0" max="100" step="1" value="35">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label-row"><span class="slider-name">Grade 2 share</span><span class="slider-readout" id="g2-out">—</span></div>
+      <input type="range" id="g2" min="0" max="100" step="1" value="29">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label-row"><span class="slider-name muted">Grade 3 share (auto, fills to 100%)</span><span class="slider-readout muted" id="g3-out">—</span></div>
+    </div>
+
+    <div class="output-block">
+      <div class="output-row">
+        <div>
+          <div class="output-label">WEEKLY SUPPLY AT THIS MIX</div>
+          <div class="output-value" id="wafer-supply">—</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="output-label">VS TODAY</div>
+          <div class="output-value small" id="wafer-delta">—</div>
+        </div>
+      </div>
+      <div class="formula-box" id="wafer-formula">supply = lots/week × base_chips × weighted_yield</div>
+    </div>
+  </div>
+
+  <div class="simulator">
+    <div class="sim-header">P2 · LINE × GRADE PROCESS VARIATION</div>
+    <h2 class="sim-title">What if Line B caught up to Line A on Grade 3?</h2>
+    <p class="sim-question">Lines A and B yield identically on Grades 1 and 2 but Line B underperforms on Grade 3. Drag to lift Line B's Grade 3 yield toward Line A's.</p>
+
+    <div style="margin-top: 1rem;">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>GRADE</th>
+            <th>LINE A</th>
+            <th>LINE B</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><div class="heatmap-cell" id="cell-ag1">—</div></td>
+            <td><div class="heatmap-cell" id="cell-bg1">—</div></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><div class="heatmap-cell" id="cell-ag2">—</div></td>
+            <td><div class="heatmap-cell" id="cell-bg2">—</div></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><div class="heatmap-cell" id="cell-ag3">—</div></td>
+            <td><div class="heatmap-cell" id="cell-bg3">—</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="slider-row" style="margin-top: 1.25rem;">
+      <div class="slider-label-row"><span class="slider-name">Line B Grade 3 yield</span><span class="slider-readout" id="lineb-g3-out">—</span></div>
+      <input type="range" id="lineb-g3" min="87.9" max="94.3" step="0.1" value="87.9">
+      <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px; display: flex; justify-content: space-between;">
+        <span>↑ today: <span id="lb-g3-today">—</span></span>
+        <span>Line A target: <span id="la-g3-target">—</span> ↑</span>
+      </div>
+    </div>
+
+    <div class="output-block">
+      <div>
+        <div class="output-label">SUPPLY GAIN FROM CLOSING THIS GAP</div>
+        <div class="output-value" id="linegrade-gain">—</div>
+      </div>
+      <div class="formula-box" id="linegrade-formula">gain = lineB_G3_lots/week × base_chips × Δyield</div>
+    </div>
+  </div>
+
+  <div class="simulator">
+    <div class="sim-header">P3 · CYCLE TIME VARIANCE</div>
+    <h2 class="sim-title">What if each station ran at its committed cycle time?</h2>
+    <p class="sim-question">Drag a station's actual CT. Only changes to the bottleneck (highlighted) move supply. Try S5 or S6 first — they're not the bottleneck.</p>
+
+    <div style="margin-top: 1rem;" id="station-rows"></div>
+
+    <div class="station-mini-note">Black tick = committed CT. Bar = actual CT. Bottleneck = station with the highest actual CT.</div>
+
+    <div class="ct-sliders">
+      <div class="slider-row" style="margin: 0;">
+        <div class="slider-label-row"><span class="slider-name" style="font-size: 12px;">S1 (currently bottleneck)</span></div>
+        <input type="range" id="ct-S1" min="0.5" max="20" step="0.1" value="15.26">
+      </div>
+      <div class="slider-row" style="margin: 0;">
+        <div class="slider-label-row"><span class="slider-name" style="font-size: 12px;">S5</span></div>
+        <input type="range" id="ct-S5" min="0.5" max="20" step="0.1" value="8.47">
+      </div>
+      <div class="slider-row" style="margin: 0;">
+        <div class="slider-label-row"><span class="slider-name" style="font-size: 12px;">S6</span></div>
+        <input type="range" id="ct-S6" min="0.5" max="20" step="0.1" value="7.88">
+      </div>
+    </div>
+
+    <div class="output-block">
+      <div class="output-row">
+        <div>
+          <div class="output-label">WEEKLY SUPPLY · BOTTLENECK = <span id="ct-bottleneck-name">—</span></div>
+          <div class="output-value" id="ct-supply">—</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="output-label">VS TODAY</div>
+          <div class="output-value small" id="ct-delta">—</div>
+        </div>
+      </div>
+      <div class="formula-box" id="ct-formula">supply = (7 ÷ bottleneck_CT) × N_lines × base_chips × current_yield</div>
+    </div>
+  </div>
+
+  <div class="section-divider" id="section-cap">02C · CAPACITY FACTORS · how to close the <span id="cap-gap-label">—</span> chips/week gap</div>
+
+  <div class="simulator">
+    <div class="sim-header">C1 · NUMBER OF LINES</div>
+    <h2 class="sim-title">How many lines do we need to meet demand?</h2>
+    <p class="sim-question">Drag to add or remove lines. Demand line shows the target.</p>
+
+    <div style="position: relative; height: 220px; margin: 1rem 0 0.5rem; padding-left: 36px;">
+      <div style="position: absolute; left: 0; top: 0; height: 180px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--text-tertiary); text-align: right; width: 30px;">
+        <div id="lines-y-max">140K</div>
+        <div id="lines-y-mid">70K</div>
+        <div>0</div>
+      </div>
+      <svg width="100%" height="200" viewBox="0 0 480 200" class="chart-svg" id="lines-svg"></svg>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-label-row"><span class="slider-name">Number of lines</span><span class="slider-readout" id="n-lines-out">—</span></div>
+      <input type="range" id="n-lines" min="1" max="6" step="1" value="2">
+    </div>
+
+    <div class="output-block">
+      <div class="output-row">
+        <div>
+          <div class="output-label">MAX WEEKLY SUPPLY</div>
+          <div class="output-value" id="lines-supply">—</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="output-label">VS DEMAND</div>
+          <div class="output-value accent" id="lines-gap-val">—</div>
+          <div class="tile-sub" id="lines-gap-label">—</div>
+        </div>
+      </div>
+      <div class="formula-box" id="lines-formula">max supply = 7 × N_lines × base_chips × best_yield</div>
+    </div>
+  </div>
+
+  <div class="simulator">
+    <div class="sim-header">C2 · BOTTLENECK CYCLE TIME</div>
+    <h2 class="sim-title">What if we invest to make the bottleneck faster?</h2>
+    <p class="sim-question">Drag to lower the bottleneck CT (more parallel slots or faster equipment). The curve flattens at low CT — diminishing returns.</p>
+
+    <div style="position: relative; height: 200px; margin: 1rem 0 0.5rem; padding-left: 36px;">
+      <div style="position: absolute; left: 0; top: 0; height: 160px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--text-tertiary); text-align: right; width: 30px;">
+        <div id="bnct-y-max">200K</div>
+        <div id="bnct-y-mid">100K</div>
+        <div>0</div>
+      </div>
+      <svg width="100%" height="180" viewBox="0 0 480 180" class="chart-svg" id="bnct-svg"></svg>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-label-row"><span class="slider-name">Bottleneck cycle time</span><span class="slider-readout" id="bn-ct-out">—</span></div>
+      <input type="range" id="bn-ct" min="0.3" max="2" step="0.05" value="1.0">
+    </div>
+
+    <div class="output-block">
+      <div class="output-row">
+        <div>
+          <div class="output-label">MAX WEEKLY SUPPLY (CURRENT LINES, BEST YIELD)</div>
+          <div class="output-value" id="bnct-supply">—</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="output-label">VS CURRENT CEILING</div>
+          <div class="output-value small" id="bnct-delta">—</div>
+        </div>
+      </div>
+      <div class="formula-box" id="bnct-formula">max supply = (7 ÷ bottleneck_CT) × N_lines × base_chips × best_yield</div>
+    </div>
+  </div>
+
+  <div class="simulator">
+    <div class="sim-header">C3 · BEST ACHIEVABLE YIELD</div>
+    <h2 class="sim-title">What if a premium-grade contract lifts the yield ceiling?</h2>
+    <p class="sim-question">Currently the best grade we have access to yields <span id="c3-current-best">—</span>. A premium contract could lift this. Note: the gain compounds with line count.</p>
+
+    <div style="margin: 1.5rem 0 1rem; padding-left: 36px; position: relative;">
+      <div style="position: absolute; left: 0; top: 0; height: 160px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--text-tertiary); text-align: right; width: 30px;">
+        <div id="by-y-max">100K</div>
+        <div id="by-y-mid">50K</div>
+        <div>0</div>
+      </div>
+      <svg width="100%" height="180" viewBox="0 0 480 180" class="chart-svg" id="by-svg"></svg>
+      <div class="legend-row">
+        <div><div class="legend-swatch" style="background: var(--text-tertiary);"></div>at current best yield</div>
+        <div><div class="legend-swatch" style="background: var(--accent);"></div>at simulated yield</div>
+      </div>
+    </div>
+
+    <div class="slider-row" style="margin-top: 1rem;">
+      <div class="slider-label-row"><span class="slider-name">Simulated best yield</span><span class="slider-readout" id="best-yield-out">—</span></div>
+      <input type="range" id="best-yield" min="99.58" max="99.99" step="0.01" value="99.58">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label-row"><span class="slider-name">At line count</span><span class="slider-readout" id="best-yield-lines-out">—</span></div>
+      <input type="range" id="best-yield-lines" min="2" max="4" step="1" value="2">
+    </div>
+
+    <div class="output-block">
+      <div class="output-row">
+        <div>
+          <div class="output-label">SUPPLY AT THIS YIELD AND LINE COUNT</div>
+          <div class="output-value" id="by-supply">—</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="output-label">GAIN VS CURRENT BEST YIELD</div>
+          <div class="output-value small" id="by-gain">—</div>
+        </div>
+      </div>
+      <div class="formula-box" id="by-formula">supply = 7 × N_lines × base_chips × premium_yield</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
