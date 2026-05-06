@@ -1,0 +1,268 @@
+/* =============================================================
+   dashboard.css — Styles specific to the data dashboard
+   Pulls in: tokens.css, shared.css
+   ============================================================= */
+
+/* Summary section — Section 1 */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.total-gap-block {
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  padding: 18px 20px;
+}
+
+.gap-children {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--border-tertiary);
+}
+
+.gap-child .tile-label { font-size: 10px; }
+.gap-child .tile-value { font-size: 20px; }
+
+/* Chart card wrapper */
+.chart-card {
+  padding: 1.25rem 1.5rem;
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  margin-bottom: 1rem;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.chart-header-text { flex: 1; min-width: 0; }
+.chart-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.chart-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* SVG chart container + reset */
+.chart-svg-wrap {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+svg.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Chart axes, gridlines, labels */
+.chart-axis-text {
+  font-size: 10px;
+  fill: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.chart-label {
+  font-size: 11px;
+  fill: var(--text-secondary);
+}
+.chart-value-label {
+  font-size: 11px;
+  fill: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.chart-grid {
+  stroke: var(--border-tertiary);
+  stroke-width: 0.5;
+}
+
+/* Chart line + area styles */
+.chart-line-demand { stroke: var(--accent); stroke-width: 2; fill: none; }
+.chart-line-supply { stroke: var(--text-primary); stroke-width: 2; fill: none; }
+.chart-line-peak { stroke: var(--text-tertiary); stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; }
+.chart-area-perf { fill: var(--text-tertiary); opacity: 0.15; }
+.chart-area-cap { fill: var(--accent); opacity: 0.12; }
+.chart-bar-ok { fill: var(--text-primary); }
+.chart-bar-slip { fill: var(--accent); }
+.chart-ref-line { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.chart-dot { fill: var(--accent); }
+.chart-dot-line { stroke: var(--accent); stroke-width: 1.5; }
+.chart-tag {
+  font-size: 9px;
+  font-weight: 500;
+  fill: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+/* Chart legend */
+.chart-legend {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.chart-legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-swatch {
+  width: 14px;
+  height: 2px;
+  flex-shrink: 0;
+}
+.legend-swatch.demand { background: var(--accent); }
+.legend-swatch.supply { background: var(--text-primary); }
+.legend-swatch.peak {
+  background: linear-gradient(to right, var(--text-tertiary) 0 4px, transparent 4px 7px, var(--text-tertiary) 7px 11px, transparent 11px 14px);
+  background-size: 7px 2px;
+}
+.legend-block { width: 14px; height: 8px; flex-shrink: 0; }
+.legend-block.perf { background: var(--text-tertiary); opacity: 0.3; }
+.legend-block.cap { background: var(--accent); opacity: 0.25; }
+
+/* Hover zones on SVG charts */
+.chart-hover-zone {
+  fill: transparent;
+  cursor: default;
+}
+.chart-hover-zone:hover { fill: rgba(0, 0, 0, 0.025); }
+
+/* Yield heatmap */
+.heatmap {
+  display: grid;
+  grid-template-columns: 80px repeat(3, 1fr);
+  gap: 4px;
+  margin: 0.5rem 0;
+}
+.heatmap-cell {
+  padding: 14px 10px;
+  text-align: center;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: default;
+  transition: filter 0.12s;
+}
+.heatmap-cell:hover { filter: brightness(0.94); }
+.heatmap-row-label {
+  padding: 14px 10px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+  align-self: center;
+}
+.heatmap-col-label {
+  padding: 4px 10px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+}
+
+/* Capacity utilization tile grid */
+.lots-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Lead-time table (Section 2.2) */
+.lt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.lt-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  padding: 0 12px 8px;
+  border-bottom: 0.5px solid var(--border-tertiary);
+  text-transform: uppercase;
+}
+.lt-table th.num { text-align: right; }
+.lt-table td {
+  padding: 11px 12px;
+  border-bottom: 0.5px solid var(--border-tertiary);
+  color: var(--text-primary);
+}
+.lt-table tr:last-child td { border-bottom: none; }
+.lt-table td.num { text-align: right; }
+.lt-table td.station { font-weight: 500; }
+.lt-table .status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: rgba(44, 44, 42, 0.06);
+}
+.lt-table .status-pill.slip {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* Findings cards (Section 4) */
+.finding {
+  padding: 1.25rem 1.5rem;
+  border: 0.5px solid var(--border-tertiary);
+  border-left: 2.5px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  margin-bottom: 12px;
+}
+.finding-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.finding-num {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.finding-body { flex: 1; min-width: 0; }
+.finding-headline {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.finding-stat {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.finding-context {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .summary-grid, .gap-children, .lots-grid { grid-template-columns: 1fr; }
+  .heatmap { grid-template-columns: 60px repeat(3, 1fr); }
+}

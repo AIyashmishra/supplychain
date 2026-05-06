@@ -1,0 +1,350 @@
+/* =============================================================
+   simulator.css — Styles specific to the simulator
+   Pulls in: tokens.css, shared.css
+   ============================================================= */
+
+/* Tile grid (used at top of simulator for headline numbers) */
+.tile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Clickable tiles (the headline tiles open a formula) */
+.tile.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.tile.clickable:hover {
+  border-color: var(--border-secondary);
+}
+.tile.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.tile-formula {
+  display: none;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border-tertiary);
+}
+.tile-formula.open {
+  display: block;
+}
+.tile-formula-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* Stack-bar: compact horizontal bar showing supply/perf gap/cap gap */
+.stack-bar {
+  display: flex;
+  height: 24px;
+  margin-top: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 10px;
+  color: white;
+}
+.stack-bar > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.15s;
+  cursor: help;
+}
+.stack-supply { background: var(--text-primary); }
+.stack-perf { background: var(--text-tertiary); }
+.stack-cap { background: var(--accent); }
+.stack-caption {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* Simulator widget card */
+.simulator {
+  padding: 1.5rem;
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  margin-bottom: 1.25rem;
+}
+.sim-header {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.sim-title {
+  font-size: 17px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.sim-question {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+}
+
+/* Output block (shows the answer for each simulator) */
+.output-block {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-top: 1rem;
+}
+.output-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+.output-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+.output-value {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.output-value.small { font-size: 18px; }
+
+.delta-pos { color: var(--good); }
+.delta-zero { color: var(--text-tertiary); }
+.delta-neg { color: var(--warn); }
+.accent { color: var(--accent); }
+
+/* Formula readout (mono-font box explaining the math) */
+.formula-box {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: 4px;
+  margin-top: 10px;
+  white-space: pre-line;
+}
+
+/* Slider rows (used in sliders inside simulator widgets) */
+.slider-row { margin: 14px 0; }
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.slider-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.slider-name.muted { color: var(--text-tertiary); }
+.slider-readout {
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.slider-readout.muted { color: var(--text-tertiary); font-weight: 400; }
+
+input[type=range] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-tertiary);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 0 0 0.5px var(--accent);
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+/* CT slider grid (S1-S6 station cycle time sliders, in C2 simulator) */
+.ct-sliders {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Mix bar (3-band horizontal bar showing G1/G2/G3 split) */
+.mix-bar {
+  display: flex;
+  height: 28px;
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 11px;
+  color: white;
+  margin: 12px 0 6px;
+}
+.mix-bar > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.15s, opacity 0.15s;
+}
+.mix-g1 { background: var(--good); }
+.mix-g2 { background: var(--accent); }
+.mix-g3 { background: var(--warn); }
+.mix-caption {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* Station rows (P2 widget: line × grade matrix) */
+.station-row {
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.station-row:last-of-type { border-bottom: none; }
+.station-bar-bg {
+  position: relative;
+  height: 6px;
+  background: var(--border-tertiary);
+  border-radius: 3px;
+  margin: 6px 0;
+}
+.station-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.15s;
+}
+.station-marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  background: var(--text-secondary);
+  pointer-events: none;
+}
+.station-readout {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.station-mini-note {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Bottleneck tag */
+.bottleneck-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+/* Matrix table (used in P2 line × grade comparison) */
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.matrix-table th {
+  text-align: right;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.matrix-table th:first-child { text-align: left; }
+.matrix-table td {
+  padding: 6px 10px;
+  text-align: right;
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.matrix-table td:first-child {
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+/* Inline SVG charts inside simulators (e.g. P3 CT chart) */
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px 0;
+}
+.chart-svg text {
+  font-size: 10px;
+  fill: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Heatmap cell (also used in simulator's mix views) */
+.heatmap-cell {
+  padding: 12px 8px;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Legend rows (used in some simulator widgets) */
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.legend-row > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .tile-grid { grid-template-columns: 1fr; }
+}

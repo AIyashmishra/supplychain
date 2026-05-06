@@ -1,0 +1,239 @@
+/* =============================================================
+   shared.css — Components used on both dashboard and simulator
+   Pulls in: tokens.css
+   ============================================================= */
+
+/* Page layout */
+.page {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 3rem 2rem 6rem;
+}
+
+.page-header {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 0.5px solid var(--border-tertiary);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header-text { flex: 1; min-width: 0; }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Header CTA button (top-right "Try simulator" / "Back to dashboard") */
+.header-cta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 0.5px solid var(--accent);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.header-cta:hover {
+  background: var(--accent);
+  color: white;
+}
+
+/* Section divider used in simulator */
+.section-divider {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  margin: 2.5rem 0 1.25rem;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+
+/* Section blocks used in dashboard */
+.section { margin: 3rem 0; }
+.section-eyebrow {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.section-intro {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem;
+}
+
+/* Upload zone — used on both pages */
+.upload-zone {
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-tertiary);
+  border: 0.5px dashed var(--border-secondary);
+  border-radius: var(--radius-lg);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.upload-zone-text {
+  flex: 1;
+  min-width: 240px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.upload-zone-text strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.upload-zone input[type=file] { display: none; }
+.upload-btn {
+  padding: 7px 14px;
+  border: 0.5px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.upload-btn:hover { border-color: var(--text-tertiary); }
+.upload-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.upload-btn.primary:hover { background: #134c87; }
+.upload-status {
+  flex-basis: 100%;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.upload-status.success { color: var(--good); }
+.upload-status.error { color: var(--warn); }
+
+/* Tile (used on both pages) */
+.tile {
+  padding: 18px 20px;
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+}
+.tile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.tile-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.tile-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+.tile-value {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.tile-value.accent { color: var(--accent); }
+.tile-value.warn { color: var(--warn); }
+.tile-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Info button (ⓘ) used in tiles and chart cards */
+.info-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: -2px -2px 0 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, color 0.15s;
+}
+.info-btn:hover { opacity: 1; color: var(--accent); }
+
+/* Empty state */
+.empty-hint {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  background: var(--bg-tertiary);
+  border: 0.5px dashed var(--border-tertiary);
+  border-radius: var(--radius-md);
+}
+
+/* Custom hover tooltip */
+.hover-tip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  background: var(--text-primary);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.12s;
+  min-width: 160px;
+  max-width: 280px;
+}
+.hover-tip.visible { opacity: 1; }
+.hover-tip-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: white;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.18);
+}
+.hover-tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+.hover-tip-row .k { color: rgba(255, 255, 255, 0.65); }
+.hover-tip-row .v { color: white; font-weight: 500; }
+.hover-tip-row.accent .v { color: #5fb0ff; }
+
+/* Responsive */
+@media (max-width: 720px) {
+  .page { padding: 2rem 1.25rem 4rem; }
+  .page-header { flex-direction: column; align-items: stretch; }
+}
