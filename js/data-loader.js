@@ -4,7 +4,7 @@
    On successful parse, calls window.init() (each page defines its
    own init that re-renders from window.DATA).
    ============================================================= */
-
+ 
 function loadFromArrayBuffer(buf, sourceLabel) {
   try {
     var wb = XLSX.read(buf, { type: 'array', cellDates: true });
@@ -13,6 +13,10 @@ function loadFromArrayBuffer(buf, sourceLabel) {
       checkSchemaCompatibility(parsed);
     }
     window.DATA = parsed;
+    // Sync simulator's local DATA variable if it has a sync hook
+    if (typeof window.syncSimulatorData === 'function') {
+      window.syncSimulatorData(parsed);
+    }
     if (typeof window.init === 'function') window.init();
     showStatus('success',
       'Loaded ' + sourceLabel + '.',
@@ -25,7 +29,7 @@ function loadFromArrayBuffer(buf, sourceLabel) {
     console.error(err);
   }
 }
-
+ 
 function loadSampleData() {
   try {
     var binary = atob(SAMPLE_B64);
@@ -37,7 +41,7 @@ function loadSampleData() {
     console.error(e);
   }
 }
-
+ 
 function showStatus(kind, msg, detail) {
   var el = document.getElementById('upload-status');
   if (!el) return;
@@ -45,7 +49,7 @@ function showStatus(kind, msg, detail) {
   el.textContent = detail ? msg + ' ' + detail : msg;
   el.style.display = 'block';
 }
-
+ 
 function bootUploadUI() {
   var fileInput = document.getElementById('file-input');
   if (fileInput) {
@@ -57,7 +61,7 @@ function bootUploadUI() {
       reader.readAsArrayBuffer(file);
     });
   }
-
+ 
   var uz = document.getElementById('upload-zone');
   if (uz) {
     ['dragenter', 'dragover'].forEach(function(evt) {
@@ -81,9 +85,10 @@ function bootUploadUI() {
       reader.readAsArrayBuffer(file);
     });
   }
-
+ 
   // Auto-load sample data on first paint
   loadSampleData();
 }
-
+ 
 document.addEventListener('DOMContentLoaded', bootUploadUI);
+ 
