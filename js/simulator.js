@@ -339,7 +339,6 @@ function initLines() {
 
 function drawLinesChart(yMax) {
   const svg = document.getElementById('lines-svg');
-  svg.innerHTML = '';
   const xs = [40, 120, 200, 280, 360, 440];
 
   function yFor(supply) {
@@ -351,12 +350,8 @@ function drawLinesChart(yMax) {
     supplies.push(7 * n * DATA.base_chips_per_lot * DATA.best_yield);
   }
 
-  // demand line
   const demandY = yFor(DATA.demand_w6);
-  svg.innerHTML += `<line x1="0" y1="${demandY}" x2="480" y2="${demandY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>`;
-  svg.innerHTML += `<text x="475" y="${demandY - 5}" text-anchor="end" font-size="10" fill="var(--accent)">demand ${fmt.int(DATA.demand_w6)}</text>`;
 
-  // step polyline
   let pts = '';
   for (let i = 0; i < xs.length; i++) {
     const y = yFor(supplies[i]);
@@ -367,17 +362,22 @@ function drawLinesChart(yMax) {
     }
     if (i === xs.length - 1) pts += ` ${xs[i] + 30},${y}`;
   }
-  svg.innerHTML += `<polyline points="${pts}" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"/>`;
 
-  // dots
-  for (let i = 0; i < xs.length; i++) {
-    svg.innerHTML += `<circle id="line-dot-${i+1}" cx="${xs[i]}" cy="${yFor(supplies[i])}" r="3" fill="var(--text-tertiary)"/>`;
-  }
+  const dots = xs.map((x, i) =>
+    `<circle id="line-dot-${i+1}" cx="${x}" cy="${yFor(supplies[i])}" r="3" fill="var(--text-tertiary)"/>`
+  ).join('');
 
-  // x labels
-  for (let i = 0; i < xs.length; i++) {
-    svg.innerHTML += `<text x="${xs[i]}" y="195" text-anchor="middle" font-size="10" fill="var(--text-tertiary)">${i+1}</text>`;
-  }
+  const xLabels = xs.map((x, i) =>
+    `<text x="${x}" y="195" text-anchor="middle" font-size="10" fill="var(--text-tertiary)">${i+1}</text>`
+  ).join('');
+
+  svg.innerHTML = `
+    <line x1="0" y1="${demandY}" x2="480" y2="${demandY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="475" y="${demandY - 5}" text-anchor="end" font-size="10" fill="var(--accent)">demand ${fmt.int(DATA.demand_w6)}</text>
+    <polyline points="${pts}" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"/>
+    ${dots}
+    ${xLabels}
+  `;
 }
 
 function updateLines() {
@@ -424,23 +424,17 @@ function initBottleneckCT() {
 
 function drawBottleneckCTChart(yMax) {
   const svg = document.getElementById('bnct-svg');
-  svg.innerHTML = '';
 
   const ctMin = 0.3, ctMax = 2.0;
   function yFor(supply) {
     return 160 - (supply / yMax) * 160;
   }
   function xFor(ct) {
-    // invert: smaller CT → right side (higher supply at right)
     return 10 + (ct - ctMin) / (ctMax - ctMin) * 460;
   }
 
-  // demand line
   const demandY = yFor(DATA.demand_w6);
-  svg.innerHTML += `<line x1="0" y1="${demandY}" x2="480" y2="${demandY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>`;
-  svg.innerHTML += `<text x="475" y="${demandY - 5}" text-anchor="end" font-size="10" fill="var(--accent)">demand ${fmt.int(DATA.demand_w6)}</text>`;
 
-  // curve
   let path = '';
   let started = false;
   for (let ct = ctMin; ct <= ctMax + 0.01; ct += 0.05) {
@@ -450,21 +444,23 @@ function drawBottleneckCTChart(yMax) {
     if (!started) { path = `M ${x.toFixed(1)},${y.toFixed(1)}`; started = true; }
     else { path += ` L ${x.toFixed(1)},${y.toFixed(1)}`; }
   }
-  svg.innerHTML += `<path d="${path}" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"/>`;
 
-  // marker for current CT
   const cx = xFor(DATA.bottleneck_ct_days);
   const cy = yFor((7 / DATA.bottleneck_ct_days) * DATA.n_lines * DATA.base_chips_per_lot * DATA.best_yield);
-  svg.innerHTML += `<circle id="bnct-marker" cx="${cx}" cy="${cy}" r="5" fill="var(--accent)"/>`;
 
-  // axis labels
-  svg.innerHTML += `<text x="10" y="178" font-size="10" fill="var(--text-tertiary)">${ctMin}d (faster)</text>`;
-  svg.innerHTML += `<text x="470" y="178" text-anchor="end" font-size="10" fill="var(--text-tertiary)">${ctMax}d (slower) →</text>`;
+  svg.innerHTML = `
+    <line x1="0" y1="${demandY}" x2="480" y2="${demandY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="475" y="${demandY - 5}" text-anchor="end" font-size="10" fill="var(--accent)">demand ${fmt.int(DATA.demand_w6)}</text>
+    <path d="${path}" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"/>
+    <circle id="bnct-marker" cx="${cx}" cy="${cy}" r="5" fill="var(--accent)"/>
+    <text x="10" y="178" font-size="10" fill="var(--text-tertiary)">${ctMin}d (faster)</text>
+    <text x="470" y="178" text-anchor="end" font-size="10" fill="var(--text-tertiary)">${ctMax}d (slower) →</text>
+  `;
 }
 
 function updateBottleneckCT() {
   const ct = parseFloat(document.getElementById('bn-ct').value);
-  document.getElementById('bn-ct-out').textContent = fmt.days(ct) + 'ays';
+  document.getElementById('bn-ct-out').textContent = fmt.days(ct);
   const supply = Math.round((7 / ct) * DATA.n_lines * DATA.base_chips_per_lot * DATA.best_yield);
   const baseline = Math.round((7 / DATA.bottleneck_ct_days) * DATA.n_lines * DATA.base_chips_per_lot * DATA.best_yield);
   const delta = supply - baseline;
@@ -521,27 +517,30 @@ function initBestYield() {
 
 function drawBestYieldChart(yMax) {
   const svg = document.getElementById('by-svg');
-  svg.innerHTML = '';
 
   function yFor(supply) {
     return 160 - (supply / yMax) * 160;
   }
 
-  // demand line
   const demandY = yFor(DATA.demand_w6);
-  svg.innerHTML += `<line x1="0" y1="${demandY}" x2="480" y2="${demandY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>`;
-  svg.innerHTML += `<text x="475" y="${demandY - 5}" text-anchor="end" font-size="10" fill="var(--accent)">demand ${fmt.int(DATA.demand_w6)}</text>`;
-
-  // 3 line counts: current, current+1, current+2
   const counts = [DATA.n_lines, DATA.n_lines + 1, DATA.n_lines + 2];
   const xs = [60, 200, 340];
-  for (let i = 0; i < 3; i++) {
-    const n = counts[i];
+
+  const bars = counts.map((n, i) => {
     const baseSupply = 7 * n * DATA.base_chips_per_lot * DATA.best_yield;
-    svg.innerHTML += `<rect id="by-bar-base-${n}" x="${xs[i]}" y="${yFor(baseSupply)}" width="40" height="${160 - yFor(baseSupply)}" fill="var(--text-tertiary)"/>`;
-    svg.innerHTML += `<rect id="by-bar-new-${n}" x="${xs[i] + 45}" y="${yFor(baseSupply)}" width="40" height="${160 - yFor(baseSupply)}" fill="var(--accent)"/>`;
-    svg.innerHTML += `<text x="${xs[i] + 43}" y="175" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${n} lines</text>`;
-  }
+    const baseY = yFor(baseSupply);
+    return `
+      <rect id="by-bar-base-${n}" x="${xs[i]}" y="${baseY}" width="40" height="${160 - baseY}" fill="var(--text-tertiary)"/>
+      <rect id="by-bar-new-${n}" x="${xs[i] + 45}" y="${baseY}" width="40" height="${160 - baseY}" fill="var(--accent)"/>
+      <text x="${xs[i] + 43}" y="175" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${n} lines</text>
+    `;
+  }).join('');
+
+  svg.innerHTML = `
+    <line x1="0" y1="${demandY}" x2="480" y2="${demandY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="475" y="${demandY - 5}" text-anchor="end" font-size="10" fill="var(--accent)">demand ${fmt.int(DATA.demand_w6)}</text>
+    ${bars}
+  `;
 }
 
 function updateBestYield() {

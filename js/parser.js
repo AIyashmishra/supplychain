@@ -117,14 +117,14 @@ function parseWorkbook(wb) {
     }
   });
 
-  // ---- Defensive yield normalization: detect 0-1 vs 0-100 scale
-  // If max observed yield is ≤ 1.5, assume fractional and scale up.
+  // ---- Defensive yield normalization: always store finalYield as 0–1 fraction.
+  // If values look like percentages (max > 1.5), divide by 100.
   const allFinalYields = Object.values(lotMeta).map(m => m.finalYield).filter(y => y !== null);
   if (allFinalYields.length > 0) {
     const maxObserved = Math.max(...allFinalYields);
-    if (maxObserved <= 1.5) {
+    if (maxObserved > 1.5) {
       Object.values(lotMeta).forEach(m => {
-        if (m.finalYield !== null) m.finalYield = m.finalYield * 100;
+        if (m.finalYield !== null) m.finalYield = m.finalYield / 100;
       });
     }
   }
