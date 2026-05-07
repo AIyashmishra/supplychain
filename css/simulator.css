@@ -2,7 +2,7 @@
    simulator.css — Styles specific to the simulator
    Pulls in: tokens.css, shared.css
    ============================================================= */
- 
+
 /* Tile grid (used at top of simulator for headline numbers) */
 .tile-grid {
   display: grid;
@@ -10,7 +10,7 @@
   gap: 12px;
   margin-bottom: 12px;
 }
- 
+
 /* Clickable tiles (the headline tiles open a formula) */
 .tile.clickable {
   cursor: pointer;
@@ -23,7 +23,7 @@
   border-color: var(--accent);
   background: var(--accent-bg);
 }
- 
+
 .tile-formula {
   display: none;
   margin-top: 12px;
@@ -39,7 +39,7 @@
   letter-spacing: 0.05em;
   margin-bottom: 6px;
 }
- 
+
 /* Stack-bar: compact horizontal bar showing supply/perf gap/cap gap */
 .stack-bar {
   display: flex;
@@ -66,7 +66,7 @@
   margin-top: 6px;
   font-style: italic;
 }
- 
+
 /* Simulator widget card */
 .simulator {
   padding: 1.5rem;
@@ -91,7 +91,7 @@
   color: var(--text-secondary);
   margin: 0 0 1rem;
 }
- 
+
 /* Output block (shows the answer for each simulator) */
 .output-block {
   background: var(--bg-secondary);
@@ -118,12 +118,12 @@
   font-variant-numeric: tabular-nums;
 }
 .output-value.small { font-size: 18px; }
- 
+
 .delta-pos { color: var(--good); }
 .delta-zero { color: var(--text-tertiary); }
 .delta-neg { color: var(--warn); }
 .accent { color: var(--accent); }
- 
+
 /* Formula readout (mono-font box explaining the math) */
 .formula-box {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -137,7 +137,7 @@
   margin-top: 10px;
   white-space: pre-line;
 }
- 
+
 /* Slider rows (used in sliders inside simulator widgets) */
 .slider-row { margin: 14px 0; }
 .slider-label-row {
@@ -158,60 +158,43 @@
   color: var(--text-primary);
 }
 .slider-readout.muted { color: var(--text-tertiary); font-weight: 400; }
- 
+
 input[type=range] {
   width: 100%;
-  height: 24px;          /* generous click target */
+  height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: transparent; /* track drawn by pseudo-element below */
-  outline: none;
-  cursor: pointer;
-  margin: 0;
-  padding: 0;
-}
-/* Webkit: render the track with explicit dimensions */
-input[type=range]::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 4px;
   background: var(--border-tertiary);
   border-radius: 2px;
+  outline: none;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 0 0 0.5px var(--accent);
-  margin-top: -6px;       /* center thumb on the 4px track within 24px element */
-}
-/* Firefox */
-input[type=range]::-moz-range-track {
-  width: 100%;
-  height: 4px;
-  background: var(--border-tertiary);
-  border-radius: 2px;
 }
 input[type=range]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
   border: 2px solid white;
 }
- 
+
 /* CT slider grid (S1-S6 station cycle time sliders, in C2 simulator) */
 .ct-sliders {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
 }
- 
+
 /* Mix bar (3-band horizontal bar showing G1/G2/G3 split) */
 .mix-bar {
   display: flex;
@@ -236,7 +219,7 @@ input[type=range]::-moz-range-thumb {
   color: var(--text-tertiary);
   font-style: italic;
 }
- 
+
 /* Station rows (P2 widget: line × grade matrix) */
 .station-row {
   padding: 12px 0;
@@ -274,7 +257,7 @@ input[type=range]::-moz-range-thumb {
   color: var(--text-tertiary);
   margin-top: 2px;
 }
- 
+
 /* Bottleneck tag */
 .bottleneck-tag {
   display: inline-block;
@@ -287,7 +270,7 @@ input[type=range]::-moz-range-thumb {
   border-radius: 3px;
   margin-left: 6px;
 }
- 
+
 /* Matrix table (used in P2 line × grade comparison) */
 .matrix-table {
   width: 100%;
@@ -315,22 +298,20 @@ input[type=range]::-moz-range-thumb {
   text-align: left;
   color: var(--text-secondary);
 }
- 
-/* Inline SVG charts inside simulators (e.g. P3 CT chart).
-   pointer-events:none ensures these never intercept mouse events
-   meant for sliders or other controls below them. */
+
+/* Inline SVG charts inside simulators (e.g. P3 CT chart) */
 .chart-svg {
   width: 100%;
+  height: 100%;
   display: block;
   margin: 8px 0;
-  pointer-events: none;
 }
 .chart-svg text {
   font-size: 10px;
   fill: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
- 
+
 /* Heatmap cell (also used in simulator's mix views) */
 .heatmap-cell {
   padding: 12px 8px;
@@ -340,7 +321,7 @@ input[type=range]::-moz-range-thumb {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
- 
+
 /* Legend rows (used in some simulator widgets) */
 .legend-row {
   display: flex;
@@ -362,9 +343,22 @@ input[type=range]::-moz-range-thumb {
   border-radius: 2px;
   flex-shrink: 0;
 }
- 
+
+/* Tile explainer paragraph (used under perf and cap gap tiles) */
+.tile-explainer {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--border-tertiary);
+}
+.tile-explainer em {
+  font-style: italic;
+  color: var(--text-primary);
+}
+
 /* Responsive */
 @media (max-width: 720px) {
   .tile-grid { grid-template-columns: 1fr; }
 }
- 

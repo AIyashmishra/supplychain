@@ -337,6 +337,58 @@ svg.chart {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+.lever-grid.lever-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.lever-total {
+  margin: 1rem 0 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+}
+.lever-total strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.gap-child-explainer {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--border-tertiary);
+}
+.gap-child-explainer em {
+  font-style: italic;
+  color: var(--text-primary);
+}
+
+/* Formula transparency box (under lines projection chart) */
+.projection-formula {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+}
+.projection-formula-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.projection-formula-body {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: pre-line;
+}
 .lever-card {
   padding: 16px 18px;
   border: 0.5px solid var(--border-tertiary);
