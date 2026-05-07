@@ -261,8 +261,171 @@ svg.chart {
   margin: 0;
 }
 
+/* =============================================================
+   Peak ceiling block (Section 02)
+   ============================================================= */
+.peak-ceiling {
+  padding: 1.5rem 1.75rem;
+  border: 0.5px solid var(--border-tertiary);
+  border-left: 2.5px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+}
+.peak-ceiling-headline {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.peak-ceiling-intro {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 1.25rem;
+}
+.peak-ceiling-row {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.peak-ceiling-number {
+  flex-shrink: 0;
+}
+.peak-ceiling-number .tile-label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.peak-ceiling-number .tile-value {
+  font-size: 36px;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+.peak-ceiling-number .tile-sub {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.peak-ceiling-formula {
+  flex: 1;
+  min-width: 280px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  white-space: pre-line;
+}
+.peak-ceiling-close {
+  margin: 1.25rem 0 0;
+  padding-top: 1rem;
+  border-top: 0.5px solid var(--border-tertiary);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.peak-ceiling-close strong {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* =============================================================
+   Lever cards (Section 04)
+   ============================================================= */
+.lever-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.lever-card {
+  padding: 16px 18px;
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+.lever-card-tag {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.lever-card-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+.lever-card-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+  flex: 1;
+}
+.lever-card-upside {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border-tertiary);
+}
+
+/* =============================================================
+   Summary + Recommendation widget pair (under each chart)
+   ============================================================= */
+.widget-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 1rem;
+}
+.widget-summary,
+.widget-recommendation {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  line-height: 1.5;
+  border: 0.5px solid transparent;
+}
+.widget-summary {
+  background: var(--bg-secondary);
+  border-color: var(--border-tertiary);
+  color: var(--text-secondary);
+}
+.widget-recommendation {
+  background: var(--accent-bg);
+  border-color: rgba(24, 95, 165, 0.18);
+  color: var(--text-primary);
+}
+.widget-tag {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+.widget-summary .widget-tag { color: var(--text-tertiary); }
+.widget-recommendation .widget-tag { color: var(--accent); }
+.widget-summary strong,
+.widget-recommendation strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.widget-recommendation strong {
+  color: var(--accent);
+}
+
 /* Responsive */
 @media (max-width: 720px) {
   .summary-grid, .gap-children, .lots-grid { grid-template-columns: 1fr; }
   .heatmap { grid-template-columns: 60px repeat(3, 1fr); }
+  .lever-grid { grid-template-columns: 1fr; }
+  .widget-pair { grid-template-columns: 1fr; }
+  .peak-ceiling-row { flex-direction: column; }
 }

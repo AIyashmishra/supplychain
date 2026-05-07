@@ -1,14 +1,35 @@
 /* =============================================================
    dashboard.js — Data dashboard rendering
-   Renders Section 1 (Summary), Section 2 (Manufacturing performance),
-   Section 3 (Supply shortfall), Section 4 (Findings).
-   Calls render functions from window.DATA and writes to known DOM ids.
+   New flow (story-first):
+     01 SUMMARY                  — demand vs supply, total/perf/cap gap
+     02 STRUCTURAL CEILING       — peak supply callout w/ formula
+     03 NEW LINES                — projection chart at +1, +2 lines
+     04 LEVERS                   — preview of additional improvements
+     05 MANUFACTURING            — 4 charts, each with summary + rec
    ============================================================= */
 
 const SVG_W = 600;
 
 /* ============================================================
-   SECTION 1 — SUMMARY METRICS
+   Reusable: Summary + Recommendation widget pair
+   ============================================================ */
+function renderChartWidgets(summaryHtml, recHtml) {
+  return `
+    <div class="widget-pair">
+      <div class="widget-summary">
+        <span class="widget-tag">Summary</span>
+        ${summaryHtml}
+      </div>
+      <div class="widget-recommendation">
+        <span class="widget-tag">Recommendation</span>
+        ${recHtml}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   SECTION 01 — SUMMARY METRICS
    ============================================================ */
 function renderSection1() {
   const D = window.DATA;
@@ -72,24 +93,282 @@ function renderSection1() {
 }
 
 /* ============================================================
-   SECTION 2 — MANUFACTURING PERFORMANCE
+   SECTION 02 — STRUCTURAL CEILING (peak supply callout)
    ============================================================ */
-function renderSection2() {
+function renderSection2_PeakCeiling() {
   const D = window.DATA;
+  const peak = Math.round(D.peak_supply);
+  const structural_gap = Math.max(0, D.demand_w6 - peak);
+  const lots_per_week_total = D.lots_per_week_per_line * D.n_lines;
+  const best_yield_pct = D.best_yield;
+  const last_week = D.weeks[D.weeks.length - 1];
+
+  const formula =
+    `Peak supply = lots/week × chips/lot × best yield\n` +
+    `            = ${lots_per_week_total.toFixed(1)} × ${fmt(D.base_chips_per_lot)} × ${best_yield_pct.toFixed(2)}%\n` +
+    `            = ${fmt(peak)} chips/week\n\n` +
+    `${last_week} demand                     = ${fmt(D.demand_w6)}\n` +
+    `Structural gap (${fmt(D.demand_w6)} − ${fmt(peak)}) = ${fmt(structural_gap)} chips/week`;
+
+  const gapK = Math.round(structural_gap / 1000);
 
   const html = `
-    ${chartCard_DemandSupply(D)}
-    ${chartCard_StationCT(D)}
-    ${heatmap_YieldLineGrade(D)}
-    ${tile_LotsPerLine(D)}
+    <div class="peak-ceiling">
+      <h3 class="peak-ceiling-headline">Even at peak performance, we miss ${last_week} demand by ~${gapK}k chips/week.</h3>
+      <p class="peak-ceiling-intro">If every station hit its committed SLA and every lot ran at best-ever yield, the current ${D.n_lines} lines top out here. This is the ceiling — not a target.</p>
+      <div class="peak-ceiling-row">
+        <div class="peak-ceiling-number">
+          <div class="tile-label">PEAK SUPPLY · ${D.n_lines} LINES</div>
+          <div class="tile-value">${fmt(peak)}</div>
+          <div class="tile-sub">chips/week ceiling</div>
+        </div>
+        <div class="peak-ceiling-formula">${formula}</div>
+      </div>
+      <p class="peak-ceiling-close">This isn't a performance gap. It's a capacity gap. <strong>We need new lines.</strong></p>
+    </div>
+  `;
+  document.getElementById('peak-ceiling-content').innerHTML = html;
+}
+
+/* ============================================================
+   SECTION 03 — NEW LINES PROJECTION
+   ============================================================ */
+function renderSection3_LinesProjection() {
+  const D = window.DATA;
+  const W = SVG_W, H = 280;
+  const m = { t: 30, r: 110, b: 36, l: 55 };
+  const innerW = W - m.l - m.r;
+  const innerH = H - m.t - m.b;
+
+  const peakPerLine = D.peak_supply / D.n_lines;
+  const peak2 = D.peak_supply;          // current 2 lines
+  const peak3 = peakPerLine * (D.n_lines + 1); // +1 line
+  const peak4 = peakPerLine * (D.n_lines + 2); // +2 lines
+
+  const xVals = D.weeks;
+  const maxY = Math.max(...D.demand_weekly, peak4) * 1.1;
+  const xStep = innerW / (xVals.length - 1);
+  const yScale = v => m.t + innerH - (v / maxY) * innerH;
+
+  const demandPath = D.demand_weekly.map((v, i) => `${i === 0 ? 'M' : 'L'} ${m.l + i * xStep} ${yScale(v)}`).join(' ');
+
+  const flatLine = (v, dashClass) => {
+    const y = yScale(v);
+    return `<line x1="${m.l}" x2="${m.l + innerW}" y1="${y}" y2="${y}" class="${dashClass}" />`;
+  };
+
+  // Crossover for +2 lines vs demand
+  let crossover = '';
+  for (let i = 1; i < D.demand_weekly.length; i++) {
+    const v0 = D.demand_weekly[i - 1];
+    const v1 = D.demand_weekly[i];
+    if (v0 <= peak4 && v1 > peak4) {
+      const t = (peak4 - v0) / (v1 - v0);
+      const crossX = m.l + (i - 1 + t) * xStep;
+      const crossY = yScale(peak4);
+      crossover = `
+        <line stroke="var(--accent)" stroke-width="0.8" stroke-dasharray="2 2" x1="${crossX}" x2="${crossX}" y1="${crossY}" y2="${m.t + innerH}" />
+        <circle cx="${crossX}" cy="${crossY}" r="3" fill="var(--accent)" />
+        <text class="chart-tag" x="${crossX + 4}" y="${crossY - 6}">+2 LINES CROSSES DEMAND</text>
+      `;
+      break;
+    }
+  }
+
+  const tickStep = Math.ceil(maxY / 5 / 10000) * 10000;
+  let ticks = [];
+  for (let y = 0; y <= maxY; y += tickStep) ticks.push(y);
+  const gridlines = ticks.map(t => `<line class="chart-grid" x1="${m.l}" x2="${m.l + innerW}" y1="${yScale(t)}" y2="${yScale(t)}" />`).join('');
+  const yLabels = ticks.map(t => `<text class="chart-axis-text" x="${m.l - 8}" y="${yScale(t) + 3}" text-anchor="end">${(t/1000)}K</text>`).join('');
+  const xLabels = xVals.map((w, i) => `<text class="chart-axis-text" x="${m.l + i * xStep}" y="${m.t + innerH + 18}" text-anchor="middle">${w}</text>`).join('');
+
+  const rightLabel = (v, label, color) =>
+    `<text class="chart-axis-text" x="${m.l + innerW + 5}" y="${yScale(v) + 3}" fill="${color}">${label}</text>`;
+
+  const lastIdx = xVals.length - 1;
+  const w_last_demand = D.demand_weekly[lastIdx];
+
+  const peak3_gap_at_end = Math.max(0, w_last_demand - peak3);
+  const peak4_headroom = peak4 - w_last_demand;
+
+  // Find where peak3 stops covering demand
+  let peak3_covers_until = xVals[lastIdx];
+  for (let i = 0; i < D.demand_weekly.length; i++) {
+    if (D.demand_weekly[i] > peak3) {
+      peak3_covers_until = i > 0 ? xVals[i - 1] : 'before ' + xVals[0];
+      break;
+    }
+  }
+
+  const summaryHtml = `A third line lifts the ceiling to <strong>${fmt(Math.round(peak3))} chips/week</strong> — clears demand through ${peak3_covers_until} but falls <strong>${fmt(Math.round(peak3_gap_at_end))} short</strong> by ${xVals[lastIdx]}.`;
+  const recHtml = `Stand up a fourth line — keeps supply above demand all ${xVals.length} weeks, with <strong>~${fmt(Math.round(peak4_headroom))} chips/week of headroom</strong> by ${xVals[lastIdx]}.`;
+
+  const html = `
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-text">
+          <h3 class="chart-title">Peak supply with +1 and +2 lines vs. demand</h3>
+          <p class="chart-sub">Each new line, running at peak performance, adds ~${fmt(Math.round(peakPerLine))} chips/week of ceiling. Demand (blue) is the actual ${xVals[0]}–${xVals[lastIdx]} forecast.</p>
+        </div>
+        <button class="info-btn" title="The three flat lines represent peak supply — the structural ceiling — at 2 lines (today), 3 lines (+1), and 4 lines (+2). Each is computed as lots/week × chips/lot × best yield, scaled by the line count. The blue rising line is forecasted demand. Where demand crosses any peak line, that scenario stops covering demand.">ⓘ</button>
+      </div>
+      <div class="chart-svg-wrap">
+        <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+          ${gridlines}
+          ${yLabels}
+          ${xLabels}
+          ${flatLine(peak2, 'chart-line-peak')}
+          ${flatLine(peak3, 'chart-line-peak')}
+          <line x1="${m.l}" x2="${m.l + innerW}" y1="${yScale(peak4)}" y2="${yScale(peak4)}" stroke="var(--text-primary)" stroke-width="1.5" fill="none" />
+          <path class="chart-line-demand" d="${demandPath}" />
+          ${rightLabel(peak2, '2 lines · ' + (peak2/1000).toFixed(1) + 'K', 'var(--text-tertiary)')}
+          ${rightLabel(peak3, '+1 line · ' + (peak3/1000).toFixed(1) + 'K', 'var(--text-tertiary)')}
+          ${rightLabel(peak4, '+2 lines · ' + (peak4/1000).toFixed(1) + 'K', 'var(--text-primary)')}
+          ${crossover}
+        </svg>
+      </div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><span class="legend-swatch demand"></span>Demand (forecast)</div>
+        <div class="chart-legend-item"><span class="legend-swatch peak"></span>Peak supply · 2 lines &amp; +1 line</div>
+        <div class="chart-legend-item"><span class="legend-swatch supply"></span>Peak supply · +2 lines</div>
+      </div>
+      ${renderChartWidgets(summaryHtml, recHtml)}
+    </div>
+  `;
+  document.getElementById('lines-projection-content').innerHTML = html;
+}
+
+/* ============================================================
+   SECTION 04 — LEVERS (preview of in-factory improvements)
+   ============================================================ */
+function computeLevers(D) {
+  // Lever 1: worst-slip station
+  let worstSlipStation = null;
+  let worstSlipPct = 0;
+  let worstSlipDays = 0;
+  D.stations.forEach(s => {
+    const mean = D.station_ct_mean[s];
+    const spec = D.committed_ct[s];
+    const slipDays = mean - spec;
+    const slipPct = slipDays / spec * 100;
+    if (slipPct > worstSlipPct) {
+      worstSlipPct = slipPct;
+      worstSlipStation = s;
+      worstSlipDays = slipDays;
+    }
+  });
+  const totalSlipDays = D.stations.reduce(
+    (sum, s) => sum + Math.max(0, D.station_ct_mean[s] - D.committed_ct[s]),
+    0
+  );
+
+  // Lever 2: worst line × grade yield cell
+  let worstCell = null;
+  let worstY = 100;
+  D.lines.forEach(l => {
+    D.grades.forEach(g => {
+      const y = D.yield_line_grade[l][g];
+      if (y > 0 && y < worstY) {
+        worstY = y;
+        worstCell = { line: l, grade: g, yield: y };
+      }
+    });
+  });
+  const otherYields = [];
+  D.lines.forEach(l => D.grades.forEach(g => {
+    if (!(l === worstCell.line && g === worstCell.grade)) {
+      otherYields.push(D.yield_line_grade[l][g]);
+    }
+  }));
+  const targetY = otherYields.reduce((a, b) => a + b, 0) / otherYields.length;
+  const lots_per_week_total = D.lots_per_week_per_line * D.n_lines;
+  const cellShare = (1 / D.n_lines) * (D.mix[worstCell.grade] || 0);
+  const yieldDeltaPct = (targetY - worstY) / 100;
+  const yieldUpside = lots_per_week_total * cellShare * D.base_chips_per_lot * yieldDeltaPct;
+
+  // Lever 3: line with highest share of worst grade
+  const worstGrade = Object.keys(D.yield_by_grade).reduce((a, b) =>
+    D.yield_by_grade[a] < D.yield_by_grade[b] ? a : b);
+  const lineGradeShares = {};
+  D.lines.forEach(l => {
+    let lineTotalLots = 0;
+    let lineWorstGradeLots = 0;
+    D.grades.forEach(g => {
+      const n = D.yield_line_grade_n[l][g] || 0;
+      lineTotalLots += n;
+      if (g === worstGrade) lineWorstGradeLots = n;
+    });
+    lineGradeShares[l] = lineTotalLots ? lineWorstGradeLots / lineTotalLots : 0;
+  });
+  const worstMixLine = Object.keys(lineGradeShares).reduce((a, b) =>
+    lineGradeShares[a] > lineGradeShares[b] ? a : b);
+  const worstMixLineShare = lineGradeShares[worstMixLine];
+  const otherLineShares = D.lines.filter(l => l !== worstMixLine).map(l => lineGradeShares[l]);
+  const avgOtherShare = otherLineShares.length
+    ? otherLineShares.reduce((a, b) => a + b, 0) / otherLineShares.length
+    : 0;
+  const shareReduction = Math.max(0, worstMixLineShare - avgOtherShare);
+  const worstLineWorstGradeY = D.yield_line_grade[worstMixLine][worstGrade] || 0;
+  const otherGradeYs = D.grades.filter(g => g !== worstGrade).map(g => D.yield_line_grade[worstMixLine][g] || 0);
+  const meanOtherY = otherGradeYs.reduce((a, b) => a + b, 0) / otherGradeYs.length;
+  const lineYieldGainPp = shareReduction * (meanOtherY - worstLineWorstGradeY);
+
+  return {
+    bottleneck: { station: worstSlipStation, slipDays: worstSlipDays, slipPct: worstSlipPct, totalSlipDays },
+    yieldCell: { ...worstCell, target: targetY, upside: yieldUpside },
+    mixShift: { line: worstMixLine, grade: worstGrade, share: worstMixLineShare, gainPp: lineYieldGainPp }
+  };
+}
+
+function renderSection4_Levers() {
+  const D = window.DATA;
+  const L = computeLevers(D);
+
+  const html = `
+    <div class="lever-grid">
+      <div class="lever-card">
+        <div class="lever-card-tag">Lever 01 · Bottleneck</div>
+        <div class="lever-card-name">Fix Station ${L.bottleneck.station} cycle time</div>
+        <p class="lever-card-text">Station ${L.bottleneck.station} runs ${L.bottleneck.slipPct.toFixed(0)}% over its committed SLA — the worst slip across all stations.</p>
+        <div class="lever-card-upside">~${L.bottleneck.totalSlipDays.toFixed(1)} days off end-to-end cycle</div>
+      </div>
+      <div class="lever-card">
+        <div class="lever-card-tag">Lever 02 · Yield</div>
+        <div class="lever-card-name">Lift Line ${L.yieldCell.line} × ${L.yieldCell.grade} yield</div>
+        <p class="lever-card-text">Line ${L.yieldCell.line} × ${L.yieldCell.grade} yields only ${L.yieldCell.yield.toFixed(1)}% — every other line/grade combo is above ${(L.yieldCell.target - 1).toFixed(0)}%.</p>
+        <div class="lever-card-upside">+${fmt(Math.round(L.yieldCell.upside))} chips/week</div>
+      </div>
+      <div class="lever-card">
+        <div class="lever-card-tag">Lever 03 · Mix shift</div>
+        <div class="lever-card-name">Rebalance Line ${L.mixShift.line} mix</div>
+        <p class="lever-card-text">Line ${L.mixShift.line} runs ${(L.mixShift.share * 100).toFixed(0)}% of its volume as ${L.mixShift.grade} — the lowest-yielding grade. Rebalance toward higher grades.</p>
+        <div class="lever-card-upside">+${L.mixShift.gainPp.toFixed(1)}pp on Line ${L.mixShift.line} yield</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('levers-content').innerHTML = html;
+}
+
+/* ============================================================
+   SECTION 05 — MANUFACTURING PERFORMANCE (existing 4 charts + widgets)
+   ============================================================ */
+function renderSection5_Manufacturing() {
+  const D = window.DATA;
+  const L = computeLevers(D);
+
+  const html = `
+    ${chartCard_DemandSupply(D, L)}
+    ${chartCard_StationCT(D, L)}
+    ${heatmap_YieldLineGrade(D, L)}
+    ${tile_LotsPerLine(D, L)}
   `;
   document.getElementById('mfg-content').innerHTML = html;
 }
 
-// ---- Chart 2.1: Demand vs. Supply line chart ----
-function chartCard_DemandSupply(D) {
+// ---- Chart 5.1: Demand vs. Supply line chart ----
+function chartCard_DemandSupply(D, L) {
   const W = SVG_W, H = 240;
-  const m = { t: 20, r: 30, b: 30, l: 50 };
+  const m = { t: 20, r: 60, b: 30, l: 50 };
   const innerW = W - m.l - m.r;
   const innerH = H - m.t - m.b;
 
@@ -101,7 +380,6 @@ function chartCard_DemandSupply(D) {
   const demandPath = D.demand_weekly.map((v, i) => `${i === 0 ? 'M' : 'L'} ${m.l + i * xStep} ${yScale(v)}`).join(' ');
   const supplyPath = D.supply_weekly.map((v, i) => `${i === 0 ? 'M' : 'L'} ${m.l + i * xStep} ${yScale(v)}`).join(' ');
 
-  // Y-axis ticks at nice intervals
   const tickStep = Math.ceil(maxY / 5 / 10000) * 10000;
   let ticks = [];
   for (let y = 0; y <= maxY; y += tickStep) ticks.push(y);
@@ -110,11 +388,16 @@ function chartCard_DemandSupply(D) {
   const yLabels = ticks.map(t => `<text class="chart-axis-text" x="${m.l - 8}" y="${yScale(t) + 3}" text-anchor="end">${(t/1000)}K</text>`).join('');
   const xLabels = xVals.map((w, i) => `<text class="chart-axis-text" x="${m.l + i * xStep}" y="${m.t + innerH + 18}" text-anchor="middle">${w}</text>`).join('');
 
-  // End-point labels for last week
   const lastIdx = xVals.length - 1;
   const lastDemandY = yScale(D.demand_weekly[lastIdx]);
   const lastSupplyY = yScale(D.supply_weekly[lastIdx]);
   const gapAtLast = D.demand_weekly[lastIdx] - D.supply_weekly[lastIdx];
+
+  const demandGrowth = (D.demand_weekly[lastIdx] - D.demand_weekly[0]) / lastIdx;
+  const supplyGrowth = (D.supply_weekly[lastIdx] - D.supply_weekly[0]) / lastIdx;
+
+  const summaryHtml = `Demand grows <strong>~${fmt(Math.round(demandGrowth))}/week</strong> while supply grows only <strong>~${fmt(Math.round(supplyGrowth))}/week</strong> — the gap widens every week.`;
+  const recHtml = `Trajectory doesn't close on its own. <strong>Structural intervention required</strong> — see Sections 03 and 04.`;
 
   return `
     <div class="chart-card">
@@ -159,15 +442,15 @@ function chartCard_DemandSupply(D) {
         <div class="chart-legend-item"><span class="legend-swatch supply"></span>Supply</div>
         <div class="chart-legend-item" style="margin-left:auto;color:var(--warn);">Gap at ${xVals[lastIdx]}: ${fmt(gapAtLast)}</div>
       </div>
+      ${renderChartWidgets(summaryHtml, recHtml)}
     </div>
   `;
 }
 
-// ---- Section 2.2: Lead time by station (table) ----
-function chartCard_StationCT(D) {
+// ---- Chart 5.2: Lead time by station (table) ----
+function chartCard_StationCT(D, L) {
   const stations = D.stations;
 
-  // Determine if all stations have the same n and same spec (so we can simplify)
   const nVals = stations.map(s => D.station_ct_n[s]);
   const specVals = stations.map(s => D.committed_ct[s]);
   const nUniform = nVals.every(n => n === nVals[0]);
@@ -208,6 +491,9 @@ function chartCard_StationCT(D) {
 
   const specCol = specUniform ? '' : '<th class="num">SPEC (d)</th>';
 
+  const summaryHtml = `<strong>Station ${L.bottleneck.station}</strong> runs <strong>+${L.bottleneck.slipPct.toFixed(0)}%</strong> over committed (${D.station_ct_mean[L.bottleneck.station].toFixed(1)} vs ${D.committed_ct[L.bottleneck.station]} days) — the worst slip of any station.`;
+  const recHtml = `Fix Station ${L.bottleneck.station} first — closing all station slip saves <strong>~${L.bottleneck.totalSlipDays.toFixed(1)} days</strong> off end-to-end cycle time.`;
+
   return `
     <div class="chart-card">
       <div class="chart-header">
@@ -233,29 +519,25 @@ function chartCard_StationCT(D) {
           ${rows}
         </tbody>
       </table>
+      ${renderChartWidgets(summaryHtml, recHtml)}
     </div>
   `;
 }
 
-// ---- Chart 2.3: Yield by line × grade heatmap ----
-function heatmap_YieldLineGrade(D) {
-  // Compute the actual data range across all line × grade combinations
+// ---- Chart 5.3: Yield by line × grade heatmap ----
+function heatmap_YieldLineGrade(D, L) {
   const allYields = [];
   D.lines.forEach(l => D.grades.forEach(g => allYields.push(D.yield_line_grade[l][g])));
   const dataMin = Math.min(...allYields);
   const dataMax = Math.max(...allYields);
-  // Pad slightly so the worst cell isn't pure red and best isn't pure green
   const pad = Math.max(0.5, (dataMax - dataMin) * 0.1);
   const lo = Math.max(0, dataMin - pad);
   const hi = Math.min(100, dataMax + pad);
 
-  // Interpolate between three reference colors based on relative yield position
-  // 0 → warn (low), 0.5 → blue (mid), 1 → green (high)
   function lerp(a, b, t) { return a + (b - a) * t; }
   function rgbStr(r, g, b, a) { return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`; }
   const colorFor = v => {
     const t = hi === lo ? 0.5 : Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
-    // Warn (BA7517) at t=0, Accent (185FA5) at t=0.5, Good (0F6E56) at t=1
     let r, g, b;
     if (t < 0.5) {
       const u = t * 2;
@@ -264,7 +546,7 @@ function heatmap_YieldLineGrade(D) {
       b = lerp(23, 165, u);
     } else {
       const u = (t - 0.5) * 2;
-      r = lerp(24, 15, u);
+      r = lerp(24, 95, u);
       g = lerp(95, 110, u);
       b = lerp(165, 86, u);
     }
@@ -290,6 +572,9 @@ function heatmap_YieldLineGrade(D) {
     });
   });
 
+  const summaryHtml = `<strong>Line ${L.yieldCell.line} × ${L.yieldCell.grade}</strong> sits at <strong>${L.yieldCell.yield.toFixed(1)}%</strong> — every other cell is above ${(L.yieldCell.target - 1).toFixed(0)}%.`;
+  const recHtml = `Fix the Line ${L.yieldCell.line} × ${L.yieldCell.grade} process — <strong>+${fmt(Math.round(L.yieldCell.upside))} chips/week</strong> at current mix.`;
+
   return `
     <div class="chart-card">
       <div class="chart-header">
@@ -300,18 +585,19 @@ function heatmap_YieldLineGrade(D) {
         <button class="info-btn" title="Each cell is the yield (S6 cumulative) for that line × wafer-grade combination, averaged across all observed lots. Color shading is rescaled to the actual data range so differences pop. Hover a cell to see exact value and sample size.">ⓘ</button>
       </div>
       <div class="heatmap">${cells.join('')}</div>
+      ${renderChartWidgets(summaryHtml, recHtml)}
     </div>
   `;
 }
 
-// ---- Tile 2.4: Capacity utilization by line ----
-function tile_LotsPerLine(D) {
+// ---- Chart 5.4: Capacity utilization by line ----
+function tile_LotsPerLine(D, L) {
   const expected = D.lots_per_week_per_line;
+  const lineUtils = D.lines.map(l => ({ l, util: D.lots_per_week_per_line_obs[l] / expected * 100 }));
   const tiles = D.lines.map(l => {
     const obs = D.lots_per_week_per_line_obs[l];
     const utilPct = obs / expected * 100;
     const utilDisplay = utilPct.toFixed(0) + '%';
-    // Color the utilization value if it's meaningfully under capacity
     const valueClass = utilPct < 95 ? 'tile-value warn' : 'tile-value';
     return `
       <div class="tile">
@@ -325,6 +611,15 @@ function tile_LotsPerLine(D) {
     `;
   }).join('');
 
+  const utilSpread = Math.max(...lineUtils.map(x => x.util)) - Math.min(...lineUtils.map(x => x.util));
+  const balanced = utilSpread < 5;
+  const summaryHtml = balanced
+    ? `Lines ${D.lines.join(' and ')} run at <strong>matched cadence</strong> — utilization spread is only ${utilSpread.toFixed(1)} points.`
+    : `Utilization spread is <strong>${utilSpread.toFixed(0)} points</strong> — lines are running unevenly.`;
+  const recHtml = balanced
+    ? `No action — line balance is healthy. <strong>Focus levers elsewhere</strong> (bottleneck, yield, mix).`
+    : `Investigate the slower line for downtime or scheduling drift — equalizing buys back the throughput delta.`;
+
   return `
     <div class="chart-card">
       <div class="chart-header">
@@ -335,189 +630,9 @@ function tile_LotsPerLine(D) {
         <button class="info-btn" title="Each line's expected output is one lot per day, so 7 lots per week. Utilization = observed lots/week ÷ 7. A line at 100% is running at full theoretical cadence; anything less is a finding worth investigating.">ⓘ</button>
       </div>
       <div class="lots-grid">${tiles}</div>
+      ${renderChartWidgets(summaryHtml, recHtml)}
     </div>
   `;
-}
-
-/* ============================================================
-   SECTION 3 — SUPPLY SHORTFALL
-   ============================================================ */
-function renderSection3() {
-  const D = window.DATA;
-  const W = SVG_W, H = 280;
-  const m = { t: 30, r: 70, b: 36, l: 55 };
-  const innerW = W - m.l - m.r;
-  const innerH = H - m.t - m.b;
-
-  const xVals = D.weeks;
-  const maxY = Math.max(...D.demand_weekly, D.peak_supply) * 1.1;
-  const xStep = innerW / (xVals.length - 1);
-  const yScale = v => m.t + innerH - (v / maxY) * innerH;
-
-  // Paths
-  const demandPath = D.demand_weekly.map((v, i) => `${i === 0 ? 'M' : 'L'} ${m.l + i * xStep} ${yScale(v)}`).join(' ');
-  const supplyPath = D.supply_weekly.map((v, i) => `${i === 0 ? 'M' : 'L'} ${m.l + i * xStep} ${yScale(v)}`).join(' ');
-  const peakY = yScale(D.peak_supply);
-  const peakPath = `M ${m.l} ${peakY} L ${m.l + innerW} ${peakY}`;
-
-  // Shaded areas
-  // Performance gap: between supply and peak (gray)
-  const perfArea = [
-    `M ${m.l} ${peakY}`,
-    `L ${m.l + innerW} ${peakY}`,
-    ...D.supply_weekly.slice().reverse().map((v, i) => {
-      const realIdx = D.supply_weekly.length - 1 - i;
-      return `L ${m.l + realIdx * xStep} ${yScale(v)}`;
-    }),
-    'Z'
-  ].join(' ');
-
-  // Capacity gap: between peak and demand, only where demand > peak
-  let capPath = '';
-  // Find first week where demand > peak
-  let startIdx = D.demand_weekly.findIndex(v => v > D.peak_supply);
-  if (startIdx >= 0) {
-    const segDemand = D.demand_weekly.slice(startIdx);
-    capPath = [
-      `M ${m.l + startIdx * xStep} ${peakY}`,
-      `L ${m.l + innerW} ${peakY}`,
-      ...segDemand.slice().reverse().map((v, i) => {
-        const realIdx = D.demand_weekly.length - 1 - i;
-        return `L ${m.l + realIdx * xStep} ${yScale(v)}`;
-      }),
-      'Z'
-    ].join(' ');
-  }
-
-  // Y axis ticks
-  const tickStep = Math.ceil(maxY / 5 / 10000) * 10000;
-  let ticks = [];
-  for (let y = 0; y <= maxY; y += tickStep) ticks.push(y);
-  const gridlines = ticks.map(t => `<line class="chart-grid" x1="${m.l}" x2="${m.l + innerW}" y1="${yScale(t)}" y2="${yScale(t)}" />`).join('');
-  const yLabels = ticks.map(t => `<text class="chart-axis-text" x="${m.l - 8}" y="${yScale(t) + 3}" text-anchor="end">${(t/1000)}K</text>`).join('');
-  const xLabels = xVals.map((w, i) => `<text class="chart-axis-text" x="${m.l + i * xStep}" y="${m.t + innerH + 18}" text-anchor="middle">${w}</text>`).join('');
-
-  // Crossover annotation: where peak crosses demand
-  let crossover = '';
-  if (startIdx > 0) {
-    // Find exact crossover x
-    const v0 = D.demand_weekly[startIdx - 1];
-    const v1 = D.demand_weekly[startIdx];
-    const t = (D.peak_supply - v0) / (v1 - v0);
-    const crossX = m.l + (startIdx - 1 + t) * xStep;
-    crossover = `
-      <line stroke="var(--accent)" stroke-width="0.8" stroke-dasharray="2 2" x1="${crossX}" x2="${crossX}" y1="${peakY}" y2="${m.t + innerH}" />
-      <text class="chart-tag" x="${crossX + 4}" y="${peakY - 6}">PEAK CEILING CROSSED</text>
-    `;
-  }
-
-  // Peak label
-  const peakLabel = `<text class="chart-axis-text" x="${m.l + innerW + 5}" y="${peakY + 3}" fill="var(--text-tertiary)">peak ${(D.peak_supply / 1000).toFixed(1)}K</text>`;
-
-  const html = `
-    <div class="chart-card">
-      <div class="chart-header">
-        <div class="chart-header-text">
-          <h3 class="chart-title">Demand vs. supply vs. peak ceiling</h3>
-          <p class="chart-sub">Demand (blue), actual supply (black), peak supply ceiling (dashed). Gray area = recoverable. Blue area = structural.</p>
-        </div>
-        <button class="info-btn" title="The peak ceiling is the theoretical maximum output of the current factory at best-ever yield with no execution slip. The shaded gray area is the performance gap (recoverable). The shaded blue area is the capacity gap (structural — only closeable by adding lines).">ⓘ</button>
-      </div>
-      <div class="chart-svg-wrap">
-        <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-          ${gridlines}
-          ${yLabels}
-          ${xLabels}
-          <path class="chart-area-perf" d="${perfArea}" />
-          ${capPath ? `<path class="chart-area-cap" d="${capPath}" />` : ''}
-          <path class="chart-line-peak" d="${peakPath}" />
-          <path class="chart-line-supply" d="${supplyPath}" />
-          <path class="chart-line-demand" d="${demandPath}" />
-          ${peakLabel}
-          ${crossover}
-        </svg>
-      </div>
-      <div class="chart-legend">
-        <div class="chart-legend-item"><span class="legend-swatch demand"></span>Demand</div>
-        <div class="chart-legend-item"><span class="legend-swatch supply"></span>Actual supply</div>
-        <div class="chart-legend-item"><span class="legend-swatch peak"></span>Peak ceiling</div>
-        <div class="chart-legend-item"><span class="legend-block perf"></span>Performance gap (recoverable)</div>
-        <div class="chart-legend-item"><span class="legend-block cap"></span>Capacity gap (structural)</div>
-      </div>
-    </div>
-  `;
-  document.getElementById('shortfall-content').innerHTML = html;
-}
-
-/* ============================================================
-   SECTION 4 — KEY FINDINGS
-   ============================================================ */
-function renderSection4() {
-  const D = window.DATA;
-
-  // Compute capacity gap (structural)
-  const cap_gap = Math.max(0, D.demand_w6 - D.peak_supply);
-  const cap_pct = D.demand_w6 ? Math.round((cap_gap / (D.demand_w6 - D.supply_w6)) * 100) : 0;
-
-  // Wafer mix drag
-  const mixDrag = ((D.best_yield - D.mix_yield) / 100) * (D.lots_per_week_per_line * D.n_lines * D.base_chips_per_lot);
-  const g3Share = D.mix.Grade3 || 0;
-
-  // Line B Grade 3 gap
-  let lineGradeGap = 0;
-  let worstLineGrade = null;
-  D.grades.forEach(g => {
-    if (D.lines.length < 2) return;
-    const ya = D.yield_line_grade[D.lines[0]][g];
-    const yb = D.yield_line_grade[D.lines[1]][g];
-    const delta = Math.abs(ya - yb);
-    if (delta > lineGradeGap) {
-      lineGradeGap = delta;
-      worstLineGrade = {
-        worseLine: ya > yb ? D.lines[1] : D.lines[0],
-        betterLine: ya > yb ? D.lines[0] : D.lines[1],
-        grade: g,
-        worseY: Math.min(ya, yb),
-        betterY: Math.max(ya, yb)
-      };
-    }
-  });
-
-  const findings = [
-    {
-      num: '01',
-      headline: `${cap_pct}% of the gap is structural.`,
-      body: `Two lines, running flawlessly at our best-ever yield (${D.best_yield.toFixed(2)}%), produce ${fmt(Math.round(D.peak_supply))} chips/week. The remaining ${fmt(cap_gap)}/week cannot be made on existing capacity, regardless of execution.`
-    },
-    {
-      num: '02',
-      headline: `Wafer mix is costing ${fmt(Math.round(mixDrag))} chips/week.`,
-      body: `We are receiving ${fmtPct(g3Share, 0)} Grade 3 wafers from ChipFab. Grade 3 yields ${(D.yield_by_grade.Grade3 || 0).toFixed(0)}% versus Grade 1 at ${(D.yield_by_grade.Grade1 || 0).toFixed(2)}%. Shifting the mix toward Grade 1 closes nearly the entire performance gap.`
-    },
-    {
-      num: '03',
-      headline: lineGradeGap > 1
-        ? `Line ${worstLineGrade.worseLine} underperforms only on ${worstLineGrade.grade}.`
-        : `Lines match across all wafer grades.`,
-      body: lineGradeGap > 1
-        ? `Lines ${D.lines.join(' and ')} match to within 0.1 points on Grades 1 and 2 but diverge by ${lineGradeGap.toFixed(1)} points on ${worstLineGrade.grade}. Process gap, not equipment gap. Worth ~630 chips/week as a bridge fix.`
-        : `No material line-vs-line yield divergence — no line-specific intervention needed.`
-    }
-  ];
-
-  const html = findings.map(f => `
-    <div class="finding">
-      <div class="finding-row">
-        <div class="finding-num">${f.num}</div>
-        <div class="finding-body">
-          <div class="finding-headline">${f.headline}</div>
-          <p class="finding-context">${f.body}</p>
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('findings-content').innerHTML = html;
 }
 
 /* ============================================================
@@ -526,8 +641,8 @@ function renderSection4() {
 function init() {
   if (!window.DATA) return;
   renderSection1();
-  renderSection2();
-  renderSection3();
-  renderSection4();
+  renderSection2_PeakCeiling();
+  renderSection3_LinesProjection();
+  renderSection4_Levers();
+  renderSection5_Manufacturing();
 }
-
